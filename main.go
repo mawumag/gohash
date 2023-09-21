@@ -12,6 +12,7 @@ import (
 	"net/smtp"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -32,6 +33,8 @@ func main() {
 	rootDirectory := os.Args[2]
 
 	files, err := os.ReadDir(rootDirectory)
+	SortFileSizeDescend(files)
+
 	if err != nil {
 		log.Fatalf("Error reading the specified directory: %v", err)
 	}
@@ -120,6 +123,7 @@ func main() {
 			hashError = true
 		} else {
 			hashSuccess++
+			fmt.Printf("MD5 hash match for %s: computed=%s\n", result.FilePath, dbHash)
 		}
 	}
 	hashLogs += fmt.Sprintf("%d files have passed the integrity tests\n", hashSuccess)
@@ -140,6 +144,20 @@ func main() {
 
 		sendEmail(dest, subject, hashLogs)
 	}
+}
+
+func SortFileSizeDescend(files []os.DirEntry) {
+	sort.Slice(files, func(i, j int) bool {
+		info1, err := files[i].Info()
+		if err != nil {
+			log.Fatal(err)
+		}
+		info2, err := files[j].Info()
+		if err != nil {
+			log.Fatal(err)
+		}
+		return info1.Size() > info2.Size()
+	})
 }
 
 func computeFileMD5Hash(filePath string) (string, error) {
